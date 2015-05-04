@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">How Old</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="your_photos">Choose a photo</string>
+</resources>
