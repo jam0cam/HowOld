@@ -18,4 +18,5 @@
         android:padding="@dimen/grid_list_padding"
         />
 
+    <include layout="@layout/fab" />
 </FrameLayout>
