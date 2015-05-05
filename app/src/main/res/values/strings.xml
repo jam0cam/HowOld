@@ -4,4 +4,6 @@
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="your_photos">Choose a photo</string>
+    <string name="title_activity_face">FaceActivity</string>
+    <string name="transition_name">photo</string>
 </resources>

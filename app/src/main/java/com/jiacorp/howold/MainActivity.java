@@ -1,11 +1,16 @@
 package com.jiacorp.howold;
 
+import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.ImageButton;
 
@@ -17,6 +22,7 @@ import butterknife.InjectView;
 
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = MainActivity.class.getName();
 
     @InjectView(R.id.grid)
     GridView mGridview;
@@ -45,8 +51,25 @@ public class MainActivity extends AppCompatActivity {
         mGridview.setAdapter(mAdapter);
 
         setSupportActionBar(mToolbar);
-
         getSupportActionBar().setTitle(getString(R.string.your_photos));
+
+        mGridview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = new Intent(MainActivity.this, FaceActivity.class);
+                intent.putExtra("path", imagePaths.get(position));
+
+                String transitionName = getString(R.string.transition_name);
+
+                if (Util.atLeastLollipop()) {
+                    view.setTransitionName(transitionName);
+                }
+
+                ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(MainActivity.this, view, transitionName);
+                ActivityCompat.startActivity(MainActivity.this, intent, options.toBundle());
+
+            }
+        });
     }
 
     private void fetchImagePaths() {
