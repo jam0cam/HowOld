@@ -3,6 +3,7 @@ package com.jiacorp.howold;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
@@ -10,15 +11,21 @@ import com.bumptech.glide.load.resource.drawable.GlideDrawable;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 
+import javax.inject.Inject;
+
 import butterknife.ButterKnife;
 import butterknife.InjectView;
 
 
 public class FaceActivity extends AppCompatActivity {
 
+    private static String TAG = FaceActivity.class.getName();
+
+    @Inject
+    FaceService mFaceService;
+
     @InjectView(R.id.image_view)
     ImageView mImageView;
-
     String mPath;
 
     @Override
@@ -32,6 +39,13 @@ public class FaceActivity extends AppCompatActivity {
 
         ActivityCompat.postponeEnterTransition(this);
 
+        loadImage();
+
+        ((MyApplication) getApplication()).inject(this);
+
+    }
+
+    private void loadImage() {
         Glide.with(this)
                 .load(mPath)
                 .listener(new RequestListener<String, GlideDrawable>() {
@@ -43,10 +57,16 @@ public class FaceActivity extends AppCompatActivity {
                     @Override
                     public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
                         ActivityCompat.startPostponedEnterTransition(FaceActivity.this);
+                        detectFace();
                         return false;
                     }
                 })
                 .into(mImageView);
+    }
+
+
+    private void detectFace() {
+        Log.d(TAG, "detecting face");
     }
 
 }

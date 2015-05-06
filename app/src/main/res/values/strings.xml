@@ -6,4 +6,8 @@
     <string name="your_photos">Choose a photo</string>
     <string name="title_activity_face">FaceActivity</string>
     <string name="transition_name">photo</string>
+
+    <string name="face_api_key">d4b08a16bb000c885be7481d9df44b95</string>
+    <string name="face_api_secret">TRmpqYhFCzM0P23U2axLDYVTdSfZGh3K</string>
+    <string name="face_api_url">apius.faceplusplus.com</string>
 </resources>
