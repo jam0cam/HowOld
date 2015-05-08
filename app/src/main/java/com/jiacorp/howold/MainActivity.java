@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void fetchImagePaths() {
         final String[] columns = { MediaStore.Images.Media.DATA, MediaStore.Images.Media._ID };
-        final String orderBy = MediaStore.Images.Media._ID;
+        final String orderBy = MediaStore.Images.Media.DATE_ADDED + " desc";
         //Stores all the images from the gallery in Cursor
         Cursor cursor = getContentResolver().query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI, columns, null,

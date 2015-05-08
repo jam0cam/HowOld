@@ -1,5 +1,6 @@
 package com.jiacorp.howold;
 
+import android.app.ProgressDialog;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -13,6 +14,7 @@ import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestListener;
@@ -27,6 +29,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import javax.inject.Inject;
 
@@ -68,6 +71,9 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     private Paint mFemalePaint;
 
     HandlerThread detectThread = null;
+    private String[] messages;
+
+    ProgressDialog pDialog;
 
     static {
         System.loadLibrary("faceppapi");
@@ -92,6 +98,8 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
         mLabelWidth = getResources().getDimensionPixelOffset(R.dimen.label_width);
         mLabelHeight = getResources().getDimensionPixelOffset(R.dimen.label_height);
+
+        messages = getResources().getStringArray(R.array.loading_messages);
 
         ActivityCompat.postponeEnterTransition(this);
 
@@ -216,6 +224,12 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     private void faceDetect(Bitmap image) {
         FaceppDetect detect = new FaceppDetect(this, mApiKey, mApiSecret);
         detect.detect(image);
+
+        pDialog = new ProgressDialog(this);
+        Random ran = new Random();
+        pDialog.setMessage(messages[ran.nextInt(messages.length)]);
+        pDialog.show();
+
     }
 
     private void drawFaces() {
@@ -336,8 +350,13 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
                         + p.centerX + ", Y:" + p.centerY + ", W:" + p.width + ", H:" + p.height);
             }
 
-            drawFaces();
+            pDialog.dismiss();
 
+            if (!mPersons.isEmpty()) {
+                drawFaces();
+            } else {
+                runOnUiThread(() -> Toast.makeText(FaceActivity.this, "Unable to detect any faces, please try a different photo", Toast.LENGTH_LONG).show());
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
