@@ -5,9 +5,11 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.HandlerThread;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.ImageView;
@@ -51,6 +53,20 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     private Bitmap mBitmap;
     private String mApiKey;
     private String mApiSecret;
+
+    private Drawable mMaleDrawable;
+    private Drawable mFemaleDrawable;
+
+    private int mIconWidth;
+    private int mIconHeight;
+
+    private int mLabelWidth;
+    private int mLabelHeight;
+
+    private Paint mOrangePaint;
+    private Paint mMalePaint;
+    private Paint mFemalePaint;
+
     HandlerThread detectThread = null;
 
     static {
@@ -71,12 +87,34 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         mApiKey = getString(R.string.face_api_key);
         mApiSecret = getString(R.string.face_api_secret);
 
+        mIconWidth = getResources().getDimensionPixelOffset(R.dimen.icon_width);
+        mIconHeight = getResources().getDimensionPixelOffset(R.dimen.icon_height);
+
+        mLabelWidth = getResources().getDimensionPixelOffset(R.dimen.label_width);
+        mLabelHeight = getResources().getDimensionPixelOffset(R.dimen.label_height);
 
         ActivityCompat.postponeEnterTransition(this);
 
         loadImage();
 
         ((MyApplication) getApplication()).inject(this);
+
+        mFemaleDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.female_sixty, null);
+        mMaleDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.male_sixty, null);
+
+        mOrangePaint = new Paint();
+        mOrangePaint.setStyle(Paint.Style.FILL);
+        mOrangePaint.setColor(getResources().getColor(R.color.orange));
+
+        mMalePaint = new Paint();
+        mMalePaint.setStyle(Paint.Style.FILL);
+        mMalePaint.setColor(getResources().getColor(R.color.male_blue));
+        mMalePaint.setTextSize(getResources().getDimension(R.dimen.age_text_size));
+
+        mFemalePaint = new Paint();
+        mFemalePaint.setStyle(Paint.Style.FILL);
+        mFemalePaint.setColor(getResources().getColor(R.color.female_pink));
+        mFemalePaint.setTextSize(getResources().getDimension(R.dimen.age_text_size));
 
     }
 
@@ -217,6 +255,35 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
             canvas.drawLine(x - w, y - h, x + w, y - h, paint);
             canvas.drawLine(x + w, y + h, x - w, y + h, paint);
             canvas.drawLine(x + w, y + h, x + w, y - h, paint);
+
+            //coordinates for female icon drawing
+            int left = (int)(x-w+20);
+            int top = (int) (y+h+10);
+            int right = left + mIconWidth;
+
+            //draws orange rectangle
+            canvas.drawRect(x - w, y + h, x - w + mLabelWidth, y + h + mLabelHeight, mOrangePaint);
+
+            if (p.gender.equalsIgnoreCase("female")) {
+                Log.d(TAG, "female detected");
+
+                //draws female icon on top of the rectangle
+                mFemaleDrawable.setBounds(left, top, right, top + mIconHeight);
+                mFemaleDrawable.draw(canvas);
+
+                //draws age in the rectangle
+                canvas.drawText(String.valueOf(p.age), right + 20, top + mIconHeight - 20 , mFemalePaint);
+            } else {
+
+                //draws female icon on top of the rectangle
+                mMaleDrawable.setBounds(left, top, right, top + mIconHeight);
+                mMaleDrawable.draw(canvas);
+
+                //draws age in the rectangle
+                canvas.drawText(String.valueOf(p.age), right + 20, top + mIconHeight - 20 , mMalePaint);
+            }
+
+
         }
 
         //save new image
@@ -261,7 +328,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
                 p.centerX =  Float.parseFloat (((JSONObject)((JSONObject)obj.get("position")).get("center")).getString("x"));
                 p.centerY = Float.parseFloat (((JSONObject)((JSONObject)obj.get("position")).get("center")).getString("y"));
                 p.width = Float.parseFloat (((JSONObject)obj.get("position")).getString("width"));
-                p.height = Float.parseFloat (((JSONObject)obj.get("position")).getString("height"));
+                p.height = Float.parseFloat(((JSONObject) obj.get("position")).getString("height"));
 
                 mPersons.add(p);
 

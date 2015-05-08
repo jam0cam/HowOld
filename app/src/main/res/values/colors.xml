@@ -12,4 +12,6 @@
     <color name="orange_ripple">#FFB74D</color>
     <color name="dark_orange">#F57C00</color>
     <color name="light_gray">#E0E0E0</color>
+    <color name="female_pink">#ff56ff</color>
+    <color name="male_blue">#0303ff</color>
 </resources>
