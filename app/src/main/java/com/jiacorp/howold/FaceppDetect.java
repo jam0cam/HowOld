@@ -60,6 +60,9 @@ public class FaceppDetect {
                 } catch (FaceppParseException e) {
                     e.printStackTrace();
                     Log.d(TAG, "network error" + e.getMessage());
+                    if (callback != null) {
+                        callback.detectResult(null);
+                    }
                 }
 
             }

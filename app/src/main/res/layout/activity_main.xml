@@ -16,6 +16,7 @@
         android:verticalSpacing="@dimen/grid_list_padding"
         android:horizontalSpacing="@dimen/grid_list_padding"
         android:padding="@dimen/grid_list_padding"
+        android:clipToPadding="false"
         />
 
     <include layout="@layout/fab" />

@@ -73,7 +73,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     HandlerThread detectThread = null;
     private String[] messages;
 
-    ProgressDialog pDialog;
+    ProgressDialog mDialog;
 
     static {
         System.loadLibrary("faceppapi");
@@ -225,10 +225,11 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         FaceppDetect detect = new FaceppDetect(this, mApiKey, mApiSecret);
         detect.detect(image);
 
-        pDialog = new ProgressDialog(this);
+        mDialog = new ProgressDialog(this);
         Random ran = new Random();
-        pDialog.setMessage(messages[ran.nextInt(messages.length)]);
-        pDialog.show();
+        mDialog.setMessage(messages[ran.nextInt(messages.length)]);
+        mDialog.setCancelable(false);
+        mDialog.show();
 
     }
 
@@ -326,6 +327,10 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     @Override
     public void detectResult(JSONObject rst) {
+        if (rst == null) {
+            showError();
+        }
+
         try {
             JSONArray arr = (JSONArray) rst.get("face");
 
@@ -350,16 +355,20 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
                         + p.centerX + ", Y:" + p.centerY + ", W:" + p.width + ", H:" + p.height);
             }
 
-            pDialog.dismiss();
+            mDialog.dismiss();
 
             if (!mPersons.isEmpty()) {
                 drawFaces();
             } else {
-                runOnUiThread(() -> Toast.makeText(FaceActivity.this, "Unable to detect any faces, please try a different photo", Toast.LENGTH_LONG).show());
+                showError();
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    private void showError() {
+        runOnUiThread(() -> Toast.makeText(FaceActivity.this, "Unable to detect any faces, please try a different photo", Toast.LENGTH_LONG).show());
     }
 //
 //    @Override
