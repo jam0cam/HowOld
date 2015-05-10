@@ -34,6 +34,9 @@
             android:name=".FaceActivity"
             android:label="@string/title_activity_face" >
         </activity>
+        <meta-data
+            android:name="com.crashlytics.ApiKey"
+            android:value="e1a67b236e055ac2a028108be9a302898966114e" />
     </application>
 
 </manifest>

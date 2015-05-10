@@ -46,7 +46,6 @@ public class MainActivity extends AppCompatActivity {
 
     List<String> mImagePaths;
     GridAdapter mAdapter;
-    private Uri mNewPhotoUri;
     private String mCurrentPhotoPath;
 
     private Tracker mTracker;

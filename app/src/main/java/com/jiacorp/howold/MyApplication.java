@@ -3,10 +3,12 @@ package com.jiacorp.howold;
 import android.app.Application;
 import android.os.Environment;
 
+import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.analytics.GoogleAnalytics;
 import com.google.android.gms.analytics.Tracker;
 
 import dagger.ObjectGraph;
+import io.fabric.sdk.android.Fabric;
 
 /**
  * Created by jitse on 5/5/15.
@@ -19,6 +21,7 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        Fabric.with(this, new Crashlytics());
 
         sObjectGraph = ObjectGraph.create(new DefaultModule());
         sObjectGraph.injectStatics();
