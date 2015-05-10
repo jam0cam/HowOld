@@ -10,7 +10,6 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.HandlerThread;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.res.ResourcesCompat;
@@ -25,6 +24,8 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.faceplusplus.api.FaceDetecter;
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.Tracker;
 import com.google.gson.JsonObject;
 
 import org.json.JSONArray;
@@ -91,6 +92,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     ProgressDialog mDialog;
 
     private Uri mShareUri;
+    private Tracker mTracker;
 
     static {
         System.loadLibrary("faceppapi");
@@ -105,6 +107,13 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         ActivityCompat.postponeEnterTransition(this);
 
         ButterKnife.inject(this);
+
+        mTracker = ((MyApplication)getApplication()).getTracker();
+
+        mTracker.send(new HitBuilders.EventBuilder()
+                .setCategory(GoogleAnalytics.CAT_FACE)
+                .setAction(GoogleAnalytics.ACTION_LAUNCHED)
+                .build());
 
         mFab.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.abc_ic_menu_share_mtrl_alpha, null));
         mPath = getIntent().getExtras().getString("path");
@@ -367,8 +376,21 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     @Override
     public void detectResult(JSONObject rst) {
         if (rst == null) {
+            mTracker.send(new HitBuilders.EventBuilder()
+                    .setCategory(GoogleAnalytics.CAT_FACE)
+                    .setAction(GoogleAnalytics.ACTION_FACE_DETECTION)
+                    .setLabel(GoogleAnalytics.LABEL_FAILED)
+                    .build());
             handleError();
+            return;
         }
+
+        mTracker.send(new HitBuilders.EventBuilder()
+                .setCategory(GoogleAnalytics.CAT_FACE)
+                .setAction(GoogleAnalytics.ACTION_FACE_DETECTION)
+                .setLabel(GoogleAnalytics.LABEL_SUCCESS)
+                .build());
+        handleError();
 
         try {
             JSONArray arr = (JSONArray) rst.get("face");
@@ -399,6 +421,12 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
             if (!mPersons.isEmpty()) {
                 drawFaces();
             } else {
+                mTracker.send(new HitBuilders.EventBuilder()
+                        .setCategory(GoogleAnalytics.CAT_FACE)
+                        .setAction(GoogleAnalytics.ACTION_FACE_DETECTION)
+                        .setLabel(GoogleAnalytics.LABEL_NO_FACES)
+                        .build());
+                handleError();
                 handleError();
             }
         } catch (JSONException e) {
@@ -432,6 +460,11 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         if (mShareUri == null) {
             return;
         }
+
+        mTracker.send(new HitBuilders.EventBuilder()
+                .setCategory(GoogleAnalytics.CAT_FACE)
+                .setAction(GoogleAnalytics.ACTION_SHARE)
+                .build());
 
         Log.d(TAG, "sharing image");
 

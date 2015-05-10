@@ -17,6 +17,9 @@ import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.ImageButton;
 
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.Tracker;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -46,6 +49,8 @@ public class MainActivity extends AppCompatActivity {
     private Uri mNewPhotoUri;
     private String mCurrentPhotoPath;
 
+    private Tracker mTracker;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,6 +58,12 @@ public class MainActivity extends AppCompatActivity {
 
         ButterKnife.inject(this);
 
+        mTracker = ((MyApplication)getApplication()).getTracker();
+
+        mTracker.send(new HitBuilders.EventBuilder()
+                .setCategory(GoogleAnalytics.CAT_MAIN)
+                .setAction(GoogleAnalytics.ACTION_LAUNCHED)
+                .build());
 
         mFab.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_camera_white, null));
 
@@ -78,6 +89,12 @@ public class MainActivity extends AppCompatActivity {
                     view.setTransitionName(transitionName);
                 }
 
+                mTracker.send(new HitBuilders.EventBuilder()
+                        .setCategory(GoogleAnalytics.CAT_MAIN)
+                        .setAction(GoogleAnalytics.ACTION_CLICKED_IMAGE)
+                        .build());
+
+
                 ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(MainActivity.this, view, transitionName);
                 ActivityCompat.startActivity(MainActivity.this, intent, options.toBundle());
 
@@ -91,6 +108,11 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.fab)
     public void dispatchTakePictureIntent() {
+        mTracker.send(new HitBuilders.EventBuilder()
+                .setCategory(GoogleAnalytics.CAT_MAIN)
+                .setAction(GoogleAnalytics.ACTION_NEW_PHOTO)
+                .build());
+
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         // Ensure that there's a camera activity to handle the intent
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
@@ -130,12 +152,23 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == RESULT_OK) {
+            mTracker.send(new HitBuilders.EventBuilder()
+                    .setCategory(GoogleAnalytics.CAT_MAIN)
+                    .setAction(GoogleAnalytics.ACTION_NEW_PHOTO)
+                    .setLabel(GoogleAnalytics.LABEL_PHOTO_TAKEN)
+                    .build());
 
             galleryAddPic();
             insertPicAtFrontOfGrid();
             Intent intent = new Intent(this, FaceActivity.class);
             intent.putExtra("path", mCurrentPhotoPath);
             startActivity(intent);
+        } else {
+            mTracker.send(new HitBuilders.EventBuilder()
+                    .setCategory(GoogleAnalytics.CAT_MAIN)
+                    .setAction(GoogleAnalytics.ACTION_NEW_PHOTO)
+                    .setLabel(GoogleAnalytics.LABEL_PHOTO_CANCELED)
+                    .build());
         }
 
     }

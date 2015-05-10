@@ -3,6 +3,9 @@ package com.jiacorp.howold;
 import android.app.Application;
 import android.os.Environment;
 
+import com.google.android.gms.analytics.GoogleAnalytics;
+import com.google.android.gms.analytics.Tracker;
+
 import dagger.ObjectGraph;
 
 /**
@@ -11,6 +14,7 @@ import dagger.ObjectGraph;
 public class MyApplication extends Application {
 
     private static ObjectGraph sObjectGraph;
+    private Tracker mTracker = null;
 
     @Override
     public void onCreate() {
@@ -34,4 +38,12 @@ public class MyApplication extends Application {
                 + "/Files";
     }
 
+    public synchronized Tracker getTracker() {
+        if ( null == mTracker ) {
+            GoogleAnalytics analytics = GoogleAnalytics.getInstance(this);
+            mTracker = analytics.newTracker(R.xml.analytics);
+        }
+
+        return mTracker;
+    }
 }
