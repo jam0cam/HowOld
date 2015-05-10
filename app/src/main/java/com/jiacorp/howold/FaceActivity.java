@@ -86,19 +86,12 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     private Paint mMalePaint;
     private Paint mFemalePaint;
 
-    HandlerThread detectThread = null;
     private String[] messages;
 
     ProgressDialog mDialog;
 
     private Uri mShareUri;
     private Tracker mTracker;
-
-    static {
-        System.loadLibrary("faceppapi");
-        System.loadLibrary("offlineapi");
-    }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -200,74 +193,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         faceDetect(image);
     }
 
-
-    private void localMyDetect(Bitmap image) {
-
-
-        float scale = Math.min(1, Math.min(600f / image.getWidth(), 600f / image.getHeight()));
-        Matrix matrix = new Matrix();
-        matrix.postScale(scale, scale);
-
-        Bitmap imgSmall = Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, false);
-        //Log.v(TAG, "imgSmall size : " + imgSmall.getWidth() + " " + imgSmall.getHeight());
-
-
-        FaceDetecter detecter = new FaceDetecter();
-//        detecter.init(this, "5mizjzcsify5094mocb4");
-        detecter.init(this, mApiKey);
-
-        FaceDetecter.Face[] faceinfo = detecter.findFaces(imgSmall);// 进行人脸检测
-
-        Log.d(TAG, "face found");
-    }
-
-    private Bitmap convert(Bitmap bitmap, Bitmap.Config config) {
-        Bitmap convertedBitmap = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), config);
-        Canvas canvas = new Canvas(convertedBitmap);
-        Paint paint = new Paint();
-        paint.setColor(Color.BLACK);
-        canvas.drawBitmap(bitmap, 0, 0, paint);
-        return convertedBitmap;
-    }
-
-    private void retrofitDetect(Bitmap image) {
-
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        float scale = Math.min(1, Math.min(600f / image.getWidth(), 600f / image.getHeight()));
-        Matrix matrix = new Matrix();
-        matrix.postScale(scale, scale);
-
-        Bitmap imgSmall = Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, false);
-        //Log.v(TAG, "imgSmall size : " + imgSmall.getWidth() + " " + imgSmall.getHeight());
-
-        imgSmall.compress(Bitmap.CompressFormat.JPEG, 100, stream);
-        byte[] array = stream.toByteArray();
-
-        String url = "https://pbs.twimg.com/profile_images/1731241160/image.jpg";
-        mFaceService.detectFaceImage(array, "glass,pose,gender,age,race,smiling")
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.newThread())
-                .subscribe(new Subscriber<JsonObject>() {
-                    @Override
-                    public void onCompleted() {
-
-
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        Log.e(TAG, "error:" + e.getMessage());
-                    }
-
-                    @Override
-                    public void onNext(JsonObject jsonObject) {
-
-                        Log.d(TAG, "rval received");
-                    }
-                });
-
-    }
-
     private void faceDetect(Bitmap image) {
         FaceppDetect detect = new FaceppDetect(this, mApiKey, mApiSecret);
         detect.detect(image);
@@ -363,16 +288,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     }
 
-    private void localDetect(Bitmap image) {
-//
-//        detecter = new FaceDetecter();
-//        detecter.init(this, mApiKey);
-//
-//        Face[] faceinfo = detecter.findFaces(image);// 进行人脸检测
-//
-//        Log.d(TAG, "face found");
-    }
-
     @Override
     public void detectResult(JSONObject rst) {
         if (rst == null) {
@@ -390,7 +305,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
                 .setAction(GoogleAnalytics.ACTION_FACE_DETECTION)
                 .setLabel(GoogleAnalytics.LABEL_SUCCESS)
                 .build());
-        handleError();
 
         try {
             JSONArray arr = (JSONArray) rst.get("face");
@@ -440,13 +354,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
             mFab.setVisibility(View.GONE);
         });
     }
-//
-//    @Override
-//    protected void onDestroy() {
-//        super.onDestroy();
-//        detecter.release(this);// 释放引擎
-//    }
-
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -504,14 +411,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         // To be safe, you should check that the SDCard is mounted
         // using Environment.getExternalStorageState() before doing this.
         File mediaStorageDir = new File(((MyApplication)getApplication()).getPrivateAppDirectory());
-
-
-
-//        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), getString(R.string.app_name));
-
-
-        // This location works best if you want the created images to be shared
-        // between applications and persist after your app has been uninstalled.
 
         // Create the storage directory if it does not exist
         if (! mediaStorageDir.exists()){
