@@ -1,6 +1,7 @@
 package com.jiacorp.howold;
 
 import android.app.Application;
+import android.os.Environment;
 
 import dagger.ObjectGraph;
 
@@ -24,6 +25,13 @@ public class MyApplication extends Application {
      */
     public void inject(Object o) {
         sObjectGraph.inject(o);
+    }
+
+    public String getPrivateAppDirectory() {
+        return Environment.getExternalStorageDirectory()
+                + "/Android/data/"
+                + getApplicationContext().getPackageName()
+                + "/Files";
     }
 
 }

@@ -1,18 +1,23 @@
 package com.jiacorp.howold;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.HandlerThread;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -27,7 +32,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
@@ -35,6 +46,7 @@ import javax.inject.Inject;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
+import butterknife.OnClick;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -49,6 +61,9 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     @InjectView(R.id.image_view)
     ImageView mImageView;
+    
+    @InjectView(R.id.fab)
+    ImageButton mFab;
 
     private List<Person> mPersons;
 
@@ -75,6 +90,8 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     ProgressDialog mDialog;
 
+    private Uri mShareUri;
+
     static {
         System.loadLibrary("faceppapi");
         System.loadLibrary("offlineapi");
@@ -85,10 +102,20 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_face);
+        ActivityCompat.postponeEnterTransition(this);
 
         ButterKnife.inject(this);
 
+        mFab.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.abc_ic_menu_share_mtrl_alpha, null));
         mPath = getIntent().getExtras().getString("path");
+
+        if (Util.atLeastLollipop()) {
+            getWindow().setStatusBarColor(getResources().getColor(R.color.black));
+        }
+
+        if (savedInstanceState != null) {
+            mShareUri = savedInstanceState.getParcelable("uri");
+        }
 
         mApiKey = getString(R.string.face_api_key);
         mApiSecret = getString(R.string.face_api_secret);
@@ -101,9 +128,12 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
         messages = getResources().getStringArray(R.array.loading_messages);
 
-        ActivityCompat.postponeEnterTransition(this);
-
-        loadImage();
+        if (mShareUri == null) {
+            loadOriginalImage();
+        } else {
+            //there is already a detected image, saved in mShareUri
+            loadDetectedImage();
+        }
 
         ((MyApplication) getApplication()).inject(this);
 
@@ -126,7 +156,15 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     }
 
-    private void loadImage() {
+    private void loadDetectedImage() {
+        Log.d(TAG, "loadDetectedImage");
+        Glide.with(this)
+                .load(mShareUri.getPath())
+                .into(mImageView);
+    }
+
+    private void loadOriginalImage() {
+        Log.d(TAG, "loadOriginalImage");
         Glide.with(this)
                 .load(mPath)
                 .asBitmap()
@@ -303,6 +341,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
         //save new image
         mBitmap = bitmap;
+        storeDetectedImage(mBitmap);
 
         FaceActivity.this.runOnUiThread(new Runnable() {
 
@@ -328,7 +367,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     @Override
     public void detectResult(JSONObject rst) {
         if (rst == null) {
-            showError();
+            handleError();
         }
 
         try {
@@ -360,15 +399,18 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
             if (!mPersons.isEmpty()) {
                 drawFaces();
             } else {
-                showError();
+                handleError();
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
 
-    private void showError() {
-        runOnUiThread(() -> Toast.makeText(FaceActivity.this, "Unable to detect any faces, please try a different photo", Toast.LENGTH_LONG).show());
+    private void handleError() {
+        runOnUiThread(() -> {
+            Toast.makeText(FaceActivity.this, "Unable to detect any faces, please try a different photo", Toast.LENGTH_LONG).show();
+            mFab.setVisibility(View.GONE);
+        });
     }
 //
 //    @Override
@@ -376,5 +418,80 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 //        super.onDestroy();
 //        detecter.release(this);// 释放引擎
 //    }
+
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        outState.putParcelable("uri", mShareUri);
+    }
+
+    @OnClick(R.id.fab)
+    public void share() {
+        if (mShareUri == null) {
+            return;
+        }
+
+        Log.d(TAG, "sharing image");
+
+        Intent shareIntent = new Intent();
+        shareIntent.setAction(Intent.ACTION_SEND);
+
+        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, getResources().getString(R.string.share_text));
+        shareIntent.putExtra(Intent.EXTRA_STREAM, mShareUri);
+        shareIntent.setType("image/jpeg");
+        startActivity(Intent.createChooser(shareIntent, getResources().getText(R.string.send_to)));
+    }
+
+    private void storeDetectedImage(Bitmap image) {
+        File pictureFile = getOutputMediaFile();
+        if (pictureFile == null) {
+            Log.d(TAG,
+                    "Error creating media file, check storage permissions: ");// e.getMessage());
+            return;
+        }
+        try {
+            FileOutputStream fos = new FileOutputStream(pictureFile);
+            image.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+            fos.close();
+
+            Log.d(TAG, "Temp photo stored here:" + pictureFile.getAbsolutePath());
+            mShareUri = Uri.fromFile(pictureFile);
+
+        } catch (FileNotFoundException e) {
+            Log.d(TAG, "File not found: " + e.getMessage());
+        } catch (IOException e) {
+            Log.d(TAG, "Error accessing file: " + e.getMessage());
+        }
+    }
+
+    /** Create a File for saving an image or video */
+    private  File getOutputMediaFile(){
+        // To be safe, you should check that the SDCard is mounted
+        // using Environment.getExternalStorageState() before doing this.
+        File mediaStorageDir = new File(((MyApplication)getApplication()).getPrivateAppDirectory());
+
+
+
+//        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), getString(R.string.app_name));
+
+
+        // This location works best if you want the created images to be shared
+        // between applications and persist after your app has been uninstalled.
+
+        // Create the storage directory if it does not exist
+        if (! mediaStorageDir.exists()){
+            if (! mediaStorageDir.mkdirs()){
+                return null;
+            }
+        }
+        // Create a media file name
+        String timeStamp = new SimpleDateFormat("ddMMyyyy_HHmm").format(new Date());
+        File mediaFile;
+        String mImageName="MI_"+ timeStamp +".jpg";
+        mediaFile = new File(mediaStorageDir.getPath() + File.separator + mImageName);
+        return mediaFile;
+    }
 
 }

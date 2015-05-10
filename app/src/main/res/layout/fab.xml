@@ -10,7 +10,6 @@
         android:layout_marginRight="@dimen/floating_action_button_margin_right"
         android:layout_marginBottom="@dimen/floating_action_button_margin_right"
         android:background="@drawable/oval_ripple"
-        android:src="@android:drawable/ic_menu_camera"
         android:elevation="@dimen/high_elevation"
         />
 </merge>

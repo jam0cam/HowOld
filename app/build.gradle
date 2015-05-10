@@ -51,4 +51,7 @@ dependencies {
 
     compile 'com.squareup.dagger:dagger:1.2.2'
     compile 'com.squareup.dagger:dagger-compiler:1.2.2'
+
+    compile 'commons-io:commons-io:2.4'
+
 }

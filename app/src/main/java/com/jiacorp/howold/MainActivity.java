@@ -8,6 +8,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -52,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
 
         ButterKnife.inject(this);
 
+
+        mFab.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_camera_white, null));
+
         fetchImagePaths();
 
         //TODO: JIA: handle the case where there are no photos
@@ -79,6 +83,10 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+
+        CleanupAsynTask task = new CleanupAsynTask();
+        task.execute(((MyApplication)getApplication()).getPrivateAppDirectory());
+
     }
 
     @OnClick(R.id.fab)
@@ -153,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
             mImagePaths.add(path);
             Log.i("PATH", path);
         }
+        cursor.close();
     }
 
     private File createImageFile() throws IOException {
