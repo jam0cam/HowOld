@@ -11,3 +11,5 @@ gradle.properties
 gradle/wrapper/gradle-wrapper.jar
 gradlew
 gradlew.bat
+keystore/android.jks
+app/app-release.apk

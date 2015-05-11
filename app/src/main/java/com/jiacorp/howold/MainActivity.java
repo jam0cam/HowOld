@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
                 .setAction(GoogleAnalytics.ACTION_LAUNCHED)
                 .build());
 
-        mFab.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_camera_white, null));
+        mFab.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.mipmap.ic_camera_white, null));
 
         fetchImagePaths();
 
