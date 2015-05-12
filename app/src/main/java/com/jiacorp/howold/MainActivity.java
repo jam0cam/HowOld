@@ -196,7 +196,6 @@ public class MainActivity extends AppCompatActivity {
             //Store the path of the image
             String path  = cursor.getString(dataColumnIndex);
             mImagePaths.add(path);
-            Log.i("PATH", path);
         }
         cursor.close();
     }

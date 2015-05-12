@@ -4,7 +4,6 @@ import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.util.Log;
 
-import com.facepp.error.FaceppParseException;
 import com.facepp.http.HttpRequests;
 import com.facepp.http.PostParameters;
 
@@ -57,7 +56,7 @@ public class FaceppDetect {
                     if (callback != null) {
                         callback.detectResult(result);
                     }
-                } catch (FaceppParseException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                     Log.d(TAG, "network error" + e.getMessage());
                     if (callback != null) {

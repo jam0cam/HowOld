@@ -95,6 +95,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         ButterKnife.inject(this);
         ((MyApplication) getApplication()).inject(this);
 
+        mDialog = new ProgressDialog(this);
 
         Intent intent = getIntent();
         String action = intent.getAction();
@@ -183,6 +184,15 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        if ((mDialog != null) && mDialog.isShowing())
+            mDialog.dismiss();
+        mDialog = null;
+    }
+
     private void loadDetectedImage() {
         Log.d(TAG, "loadDetectedImage");
         Glide.with(this)
@@ -245,14 +255,14 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     }
 
     private void faceDetect(Bitmap image) {
-        FaceppDetect detect = new FaceppDetect(this, mApiKey, mApiSecret);
-        detect.detect(image);
-
-        mDialog = new ProgressDialog(this);
         Random ran = new Random();
         mDialog.setMessage(messages[ran.nextInt(messages.length)]);
         mDialog.setCancelable(false);
         mDialog.show();
+
+        FaceppDetect detect = new FaceppDetect(this, mApiKey, mApiSecret);
+        detect.detect(image);
+
 
     }
 
@@ -341,6 +351,10 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     @Override
     public void detectResult(JSONObject rst) {
+        if (mDialog != null) {
+            mDialog.dismiss();
+        }
+
         if (rst == null) {
             mTracker.send(new HitBuilders.EventBuilder()
                     .setCategory(GoogleAnalytics.CAT_FACE)
@@ -381,8 +395,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
                         + p.centerX + ", Y:" + p.centerY + ", W:" + p.width + ", H:" + p.height);
             }
 
-            mDialog.dismiss();
-
             if (!mPersons.isEmpty()) {
                 drawFaces();
             } else {
@@ -392,7 +404,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
                         .setLabel(GoogleAnalytics.LABEL_NO_FACES)
                         .build());
                 handleError();
-                handleError();
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -400,6 +411,9 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     }
 
     private void handleError() {
+        if (mPersons != null && !mPersons.isEmpty()) {
+            return;
+        }
         runOnUiThread(() -> {
             Toast.makeText(FaceActivity.this, "Unable to detect any faces, please try a different photo", Toast.LENGTH_LONG).show();
             mFab.setVisibility(View.GONE);
