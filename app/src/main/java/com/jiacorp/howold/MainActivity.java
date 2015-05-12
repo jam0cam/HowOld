@@ -57,6 +57,10 @@ public class MainActivity extends AppCompatActivity {
 
         ButterKnife.inject(this);
 
+        if (savedInstanceState != null) {
+            mCurrentPhotoPath = savedInstanceState.getString("mCurrentPhotoPath");
+        }
+
         mTracker = ((MyApplication)getApplication()).getTracker();
 
         mTracker.send(new HitBuilders.EventBuilder()
@@ -110,6 +114,12 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString("mCurrentPhotoPath", mCurrentPhotoPath);
+    }
+
     @OnClick(R.id.fab)
     public void dispatchTakePictureIntent() {
         mTracker.send(new HitBuilders.EventBuilder()
@@ -138,23 +148,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void galleryAddPic() {
-        Log.d(TAG, "Sending broadcast");
-        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        File f = new File(mCurrentPhotoPath);
-        Uri contentUri = Uri.fromFile(f);
-        mediaScanIntent.setData(contentUri);
-        this.sendBroadcast(mediaScanIntent);
+        if (mCurrentPhotoPath != null) {
+            //on rotation, this can be null
+            Log.d(TAG, "Sending broadcast");
+            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+            File f = new File(mCurrentPhotoPath);
+            Uri contentUri = Uri.fromFile(f);
+            mediaScanIntent.setData(contentUri);
+            this.sendBroadcast(mediaScanIntent);
+        }
     }
 
     private void insertPicAtFrontOfGrid() {
-        mImagePaths.add(0, mCurrentPhotoPath);
-        mAdapter.notifyDataSetChanged();
+        if (mCurrentPhotoPath != null) {
+            //on rotation, this can be null
+            mImagePaths.add(0, mCurrentPhotoPath);
+            mAdapter.notifyDataSetChanged();
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
+        Log.d(TAG, "onActivityResult: " + mCurrentPhotoPath);
         if (resultCode == RESULT_OK) {
             mTracker.send(new HitBuilders.EventBuilder()
                     .setCategory(GoogleAnalytics.CAT_MAIN)
@@ -165,7 +181,12 @@ public class MainActivity extends AppCompatActivity {
             galleryAddPic();
             insertPicAtFrontOfGrid();
             Intent intent = new Intent(this, FaceActivity.class);
-            intent.putExtra("path", mCurrentPhotoPath);
+
+            Uri imageUri = new Uri.Builder()
+                    .path(mCurrentPhotoPath)
+                    .build();
+
+            intent.putExtra("path", imageUri);
             startActivity(intent);
         } else {
             mTracker.send(new HitBuilders.EventBuilder()

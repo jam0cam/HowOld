@@ -351,7 +351,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     @Override
     public void detectResult(JSONObject rst) {
-        if (mDialog != null) {
+        if (mDialog != null && mDialog.isShowing()) {
             mDialog.dismiss();
         }
 
