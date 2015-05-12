@@ -8,6 +8,7 @@ public class GoogleAnalytics {
     public static final String CAT_FACE = "Face Activity";
 
     public static final String ACTION_LAUNCHED = "Launched";
+    public static final String ACTION_INCOMING_SHARE = "Incoming Shared Intent";
     public static final String ACTION_CLICKED_IMAGE = "Clicked Image";
     public static final String ACTION_NEW_PHOTO = "New Photo";
     public static final String ACTION_FACE_DETECTION = "Detection Initialized";

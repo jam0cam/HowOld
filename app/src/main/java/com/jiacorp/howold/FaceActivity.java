@@ -10,7 +10,6 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.HandlerThread;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -23,16 +22,13 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
-import com.faceplusplus.api.FaceDetecter;
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
-import com.google.gson.JsonObject;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -48,9 +44,6 @@ import javax.inject.Inject;
 import butterknife.ButterKnife;
 import butterknife.InjectView;
 import butterknife.OnClick;
-import rx.Subscriber;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
 
 
 public class FaceActivity extends AppCompatActivity implements FaceppDetect.DetectCallback {
@@ -62,13 +55,13 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     @InjectView(R.id.image_view)
     ImageView mImageView;
-    
+
     @InjectView(R.id.fab)
     ImageButton mFab;
 
     private List<Person> mPersons;
 
-    private String mPath;
+    private Uri mPath;
     private Bitmap mBitmap;
     private String mApiKey;
     private String mApiSecret;
@@ -100,24 +93,26 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         ActivityCompat.postponeEnterTransition(this);
 
         ButterKnife.inject(this);
+        ((MyApplication) getApplication()).inject(this);
+
+
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
 
         mTracker = ((MyApplication)getApplication()).getTracker();
 
-        mTracker.send(new HitBuilders.EventBuilder()
-                .setCategory(GoogleAnalytics.CAT_FACE)
-                .setAction(GoogleAnalytics.ACTION_LAUNCHED)
-                .build());
+
+        if (savedInstanceState != null) {
+            mShareUri = savedInstanceState.getParcelable("uri");
+        }
 
         mFab.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.abc_ic_menu_share_mtrl_alpha, null));
-        mPath = getIntent().getExtras().getString("path");
 
         if (Util.atLeastLollipop()) {
             getWindow().setStatusBarColor(getResources().getColor(R.color.black));
         }
 
-        if (savedInstanceState != null) {
-            mShareUri = savedInstanceState.getParcelable("uri");
-        }
 
         mApiKey = getString(R.string.face_api_key);
         mApiSecret = getString(R.string.face_api_secret);
@@ -129,15 +124,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         mLabelHeight = getResources().getDimensionPixelOffset(R.dimen.label_height);
 
         messages = getResources().getStringArray(R.array.loading_messages);
-
-        if (mShareUri == null) {
-            loadOriginalImage();
-        } else {
-            //there is already a detected image, saved in mShareUri
-            loadDetectedImage();
-        }
-
-        ((MyApplication) getApplication()).inject(this);
 
         mFemaleDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.female_sixty, null);
         mMaleDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.male_sixty, null);
@@ -156,6 +142,45 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         mFemalePaint.setColor(getResources().getColor(R.color.female_pink));
         mFemalePaint.setTextSize(getResources().getDimension(R.dimen.age_text_size));
 
+
+        if (Intent.ACTION_SEND.equals(action) && type != null) {
+            if (type.startsWith("image/")) {
+
+                mTracker.send(new HitBuilders.EventBuilder()
+                        .setCategory(GoogleAnalytics.CAT_FACE)
+                        .setAction(GoogleAnalytics.ACTION_INCOMING_SHARE)
+                        .build());
+
+                Uri imageUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                if (imageUri != null) {
+                    mPath = imageUri;
+                } else {
+                    Log.e(TAG, "shared intent received, but there is no stream uri");
+                    finish();
+                }
+            } else {
+                Log.e(TAG, "shared intent received, it is not of image type");
+                finish();
+            }
+        } else {
+            // Handle other intents, such as being started from the home screen
+
+            mTracker.send(new HitBuilders.EventBuilder()
+                    .setCategory(GoogleAnalytics.CAT_FACE)
+                    .setAction(GoogleAnalytics.ACTION_LAUNCHED)
+                    .build());
+
+            mPath = intent.getExtras().getParcelable("path");
+        }
+
+        if (mShareUri == null) {
+            loadOriginalImage();
+        } else {
+            //there is already a detected image, saved in mShareUri
+            loadDetectedImage();
+        }
+
+
     }
 
     private void loadDetectedImage() {
@@ -167,18 +192,20 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     private void loadOriginalImage() {
         Log.d(TAG, "loadOriginalImage");
+
+
         Glide.with(this)
                 .load(mPath)
                 .asBitmap()
-                .listener(new RequestListener<String, Bitmap>() {
+                .listener(new RequestListener<Uri, Bitmap>() {
                     @Override
-                    public boolean onException(Exception e, String model, Target<Bitmap> target, boolean isFirstResource) {
-                        Log.e(TAG, "exception loading image" + e.getMessage());
+                    public boolean onException(Exception e, Uri model, Target<Bitmap> target, boolean isFirstResource) {
+                        Log.e(TAG, "exception loading image with path:" + mPath.getPath() + " :: " + e.getMessage());
                         return false;
                     }
 
                     @Override
-                    public boolean onResourceReady(Bitmap resource, String model, Target<Bitmap> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                    public boolean onResourceReady(Bitmap resource, Uri model, Target<Bitmap> target, boolean isFromMemoryCache, boolean isFirstResource) {
                         ActivityCompat.startPostponedEnterTransition(FaceActivity.this);
                         mBitmap = resource;
                         detectFace(resource);

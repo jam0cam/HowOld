@@ -80,7 +80,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent intent = new Intent(MainActivity.this, FaceActivity.class);
-                intent.putExtra("path", mImagePaths.get(position));
+
+                Uri imageUri = new Uri.Builder()
+                        .path(mImagePaths.get(position))
+                        .build();
+
+                intent.putExtra("path", imageUri);
 
                 String transitionName = getString(R.string.transition_name);
 
@@ -201,6 +206,14 @@ public class MainActivity extends AppCompatActivity {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
         File storageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), getString(R.string.app_name));
+
+        // Create the storage directory if it does not exist
+        if (! storageDir.exists()){
+            if (! storageDir.mkdirs()){
+                return null;
+            }
+        }
+
         File image = File.createTempFile(
                 imageFileName,  /* prefix */
                 ".jpg",         /* suffix */
