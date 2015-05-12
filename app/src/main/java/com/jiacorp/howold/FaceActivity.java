@@ -193,26 +193,50 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     private void loadOriginalImage() {
         Log.d(TAG, "loadOriginalImage");
 
+        if (mPath.toString().contains("content")) {
+            //must load the image via URI, this is probably an image received as an incoming share
+            Glide.with(this)
+                    .load(mPath)
+                    .asBitmap()
+                    .listener(new RequestListener<Uri, Bitmap>() {
+                        @Override
+                        public boolean onException(Exception e, Uri model, Target<Bitmap> target, boolean isFirstResource) {
+                            Log.e(TAG, "exception loading image with path:" + mPath.getPath() + " :: " + e.getMessage());
+                            return false;
+                        }
 
-        Glide.with(this)
-                .load(mPath)
-                .asBitmap()
-                .listener(new RequestListener<Uri, Bitmap>() {
-                    @Override
-                    public boolean onException(Exception e, Uri model, Target<Bitmap> target, boolean isFirstResource) {
-                        Log.e(TAG, "exception loading image with path:" + mPath.getPath() + " :: " + e.getMessage());
-                        return false;
-                    }
+                        @Override
+                        public boolean onResourceReady(Bitmap resource, Uri model, Target<Bitmap> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                            ActivityCompat.startPostponedEnterTransition(FaceActivity.this);
+                            mBitmap = resource;
+                            detectFace(resource);
+                            return false;
+                        }
+                    })
+                    .into(mImageView);
 
-                    @Override
-                    public boolean onResourceReady(Bitmap resource, Uri model, Target<Bitmap> target, boolean isFromMemoryCache, boolean isFirstResource) {
-                        ActivityCompat.startPostponedEnterTransition(FaceActivity.this);
-                        mBitmap = resource;
-                        detectFace(resource);
-                        return false;
-                    }
-                })
-                .into(mImageView);
+        } else {
+            //this is loading from the main list, it's a local file. Load via path
+            Glide.with(this)
+                    .load(mPath.getPath())
+                    .asBitmap()
+                    .listener(new RequestListener<String, Bitmap>() {
+                        @Override
+                        public boolean onException(Exception e, String model, Target<Bitmap> target, boolean isFirstResource) {
+                            Log.e(TAG, "exception loading image with path:" + mPath.getPath() + " :: " + e.getMessage());
+                            return false;
+                        }
+
+                        @Override
+                        public boolean onResourceReady(Bitmap resource, String model, Target<Bitmap> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                            ActivityCompat.startPostponedEnterTransition(FaceActivity.this);
+                            mBitmap = resource;
+                            detectFace(resource);
+                            return false;
+                        }
+                    })
+                    .into(mImageView);
+        }
     }
 
 
