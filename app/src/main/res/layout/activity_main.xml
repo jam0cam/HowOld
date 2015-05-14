@@ -17,6 +17,7 @@
         android:horizontalSpacing="@dimen/grid_list_padding"
         android:padding="@dimen/grid_list_padding"
         android:clipToPadding="false"
+        android:layoutAnimation="@anim/grid_load"
         />
 
     <include layout="@layout/fab" />
