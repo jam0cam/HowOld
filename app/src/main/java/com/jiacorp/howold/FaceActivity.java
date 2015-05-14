@@ -81,7 +81,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     private String[] messages;
 
-    ProgressDialog mDialog;
+    MaterialProgressDialog mDialog;
 
     private Uri mShareUri;
     private Tracker mTracker;
@@ -95,7 +95,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         ButterKnife.inject(this);
         ((MyApplication) getApplication()).inject(this);
 
-        mDialog = new ProgressDialog(this);
+        mDialog = new MaterialProgressDialog(this);
 
         Intent intent = getIntent();
         String action = intent.getAction();
