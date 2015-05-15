@@ -122,6 +122,8 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.fab)
     public void dispatchTakePictureIntent() {
+        AnimatorUtils.revealAnimationOut(mFab);
+
         mTracker.send(new HitBuilders.EventBuilder()
                 .setCategory(GoogleAnalytics.CAT_MAIN)
                 .setAction(GoogleAnalytics.ACTION_NEW_PHOTO)
@@ -170,6 +172,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        AnimatorUtils.revealAnimationIn(mFab);
+
         Log.d(TAG, "onActivityResult: " + mCurrentPhotoPath);
         if (resultCode == RESULT_OK) {
             mTracker.send(new HitBuilders.EventBuilder()

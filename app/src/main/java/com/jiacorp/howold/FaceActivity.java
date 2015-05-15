@@ -1,6 +1,5 @@
 package com.jiacorp.howold;
 
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -10,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -85,10 +85,12 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     private Uri mShareUri;
     private Tracker mTracker;
+    private boolean mPaused;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mPaused = false;
         setContentView(R.layout.activity_face);
         ActivityCompat.postponeEnterTransition(this);
 
@@ -96,6 +98,16 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         ((MyApplication) getApplication()).inject(this);
 
         mDialog = new MaterialProgressDialog(this);
+        mDialog.setOnCancelListener(dialog -> {
+            Log.d(TAG, "cancelled");
+            mDialog = null;
+            finish();
+        });
+
+        mDialog.setOnDismissListener(dialog -> {
+            Log.d(TAG, "dismissed");
+            mDialog = null;
+        });
 
         Intent intent = getIntent();
         String action = intent.getAction();
@@ -185,9 +197,15 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     }
 
     @Override
+    protected void onResume() {
+        mPaused = false;
+        super.onResume();
+    }
+
+    @Override
     public void onPause() {
         super.onPause();
-
+        mPaused = true;
         if ((mDialog != null) && mDialog.isShowing())
             mDialog.dismiss();
         mDialog = null;
@@ -256,14 +274,12 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
     private void faceDetect(Bitmap image) {
         Random ran = new Random();
+
         mDialog.setMessage(messages[ran.nextInt(messages.length)]);
-        mDialog.setCancelable(false);
-        mDialog.show();
+        new Handler().postDelayed(() -> mDialog.show(), 500);
 
         FaceppDetect detect = new FaceppDetect(this, mApiKey, mApiSecret);
         detect.detect(image);
-
-
     }
 
     private void drawFaces() {
@@ -395,7 +411,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
                         + p.centerX + ", Y:" + p.centerY + ", W:" + p.width + ", H:" + p.height);
             }
 
-            if (!mPersons.isEmpty()) {
+            if (!mPersons.isEmpty() && !mPaused) {
                 drawFaces();
             } else {
                 mTracker.send(new HitBuilders.EventBuilder()
@@ -414,10 +430,13 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         if (mPersons != null && !mPersons.isEmpty()) {
             return;
         }
-        runOnUiThread(() -> {
-            Toast.makeText(FaceActivity.this, "Unable to detect any faces, please try a different photo", Toast.LENGTH_LONG).show();
-            mFab.setVisibility(View.GONE);
-        });
+
+        if (!mPaused) {
+            runOnUiThread(() -> {
+                Toast.makeText(FaceActivity.this, "Unable to detect any faces, please try a different photo", Toast.LENGTH_LONG).show();
+                mFab.setVisibility(View.GONE);
+            });
+        }
     }
 
     @Override
