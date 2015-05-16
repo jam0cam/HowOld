@@ -20,6 +20,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.drawable.GlideDrawable;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.google.android.gms.analytics.HitBuilders;
@@ -44,6 +45,7 @@ import javax.inject.Inject;
 import butterknife.ButterKnife;
 import butterknife.InjectView;
 import butterknife.OnClick;
+import uk.co.senab.photoview.PhotoViewAttacher;
 
 
 public class FaceActivity extends AppCompatActivity implements FaceppDetect.DetectCallback {
@@ -89,6 +91,7 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     private Uri mShareUri;
     private Tracker mTracker;
     private boolean mPaused;
+    PhotoViewAttacher mAttacher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -211,8 +214,19 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     }
 
     @Override
+    public void onBackPressed() {
+        Log.d(TAG, "onBackPressed");
+        mImageView.getViewTreeObserver().removeOnGlobalLayoutListener(mAttacher);
+        mAttacher = null;
+
+        super.onBackPressed();
+    }
+
+    @Override
     public void onPause() {
+        Log.d(TAG, "onPause");
         super.onPause();
+
         mPaused = true;
         if ((mDialog != null) && mDialog.isShowing())
             mDialog.dismiss();
@@ -223,6 +237,19 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         Log.d(TAG, "loadDetectedImage");
         Glide.with(this)
                 .load(mShareUri.getPath())
+                .listener(new RequestListener<String, GlideDrawable>() {
+                    @Override
+                    public boolean onException(Exception e, String model, Target<GlideDrawable> target, boolean isFirstResource) {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onResourceReady(GlideDrawable resource, String model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
+                        mAttacher = new PhotoViewAttacher(mImageView);
+                        mAttacher.update();
+                        return false;
+                    }
+                })
                 .into(mImageView);
     }
 
@@ -404,6 +431,10 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         FaceActivity.this.runOnUiThread(() -> {
             //show the image
             mImageView.setImageBitmap(mBitmap);
+
+            mAttacher = new PhotoViewAttacher(mImageView);
+            mAttacher.update();
+
             Log.d(TAG, "finished drawing " + mPersons.size() + " faces onto the photo");
         });
     }
