@@ -2,6 +2,7 @@ package com.jiacorp.howold;
 
 import android.content.Intent;
 import android.database.Cursor;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -12,8 +13,10 @@ import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.View;
-import android.widget.AdapterView;
+import android.view.ActionMode;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.GridView;
 import android.widget.ImageButton;
 
@@ -32,7 +35,7 @@ import butterknife.InjectView;
 import butterknife.OnClick;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements GridView.MultiChoiceModeListener {
     private static final String TAG = MainActivity.class.getName();
 
     @InjectView(R.id.grid)
@@ -74,39 +77,38 @@ public class MainActivity extends AppCompatActivity {
 
         //TODO: JIA: handle the case where there are no photos
 
+        mGridview.setChoiceMode(GridView.CHOICE_MODE_MULTIPLE_MODAL);
+        mGridview.setMultiChoiceModeListener(this);
         mAdapter = new GridAdapter(this, 0, mImagePaths);
         mGridview.setAdapter(mAdapter);
 
         setSupportActionBar(mToolbar);
         getSupportActionBar().setTitle(getString(R.string.your_photos));
 
-        mGridview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent intent = new Intent(MainActivity.this, FaceActivity.class);
+        mGridview.setOnItemClickListener((parent, view, position, id) -> {
+            Intent intent = new Intent(MainActivity.this, FaceActivity.class);
 
-                Uri imageUri = new Uri.Builder()
-                        .path(mImagePaths.get(position))
-                        .build();
+            Uri imageUri = new Uri.Builder()
+                    .path(mImagePaths.get(position))
+                    .build();
 
-                intent.putExtra("path", imageUri);
+            intent.putExtra("path", imageUri);
 
-                String transitionName = getString(R.string.transition_name);
+            String transitionName = getString(R.string.transition_name);
 
-                if (Util.atLeastLollipop()) {
-                    view.setTransitionName(transitionName);
-                }
-
-                mTracker.send(new HitBuilders.EventBuilder()
-                        .setCategory(GoogleAnalytics.CAT_MAIN)
-                        .setAction(GoogleAnalytics.ACTION_CLICKED_IMAGE)
-                        .build());
-
-
-                ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(MainActivity.this, view, transitionName);
-                ActivityCompat.startActivity(MainActivity.this, intent, options.toBundle());
-
+            if (Util.atLeastLollipop()) {
+                view.setTransitionName(transitionName);
             }
+
+            mTracker.send(new HitBuilders.EventBuilder()
+                    .setCategory(GoogleAnalytics.CAT_MAIN)
+                    .setAction(GoogleAnalytics.ACTION_CLICKED_IMAGE)
+                    .build());
+
+
+            ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(MainActivity.this, view, transitionName);
+            ActivityCompat.startActivity(MainActivity.this, intent, options.toBundle());
+
         });
 
         CleanupAsynTask task = new CleanupAsynTask();
@@ -248,5 +250,94 @@ public class MainActivity extends AppCompatActivity {
         // Save a file: path for use with ACTION_VIEW intents
         mCurrentPhotoPath = image.getAbsolutePath();
         return image;
+    }
+
+    @Override
+    public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+        MenuInflater inflater = mode.getMenuInflater();
+        inflater.inflate(R.menu.menu_delete, menu);
+
+        mTracker.send(new HitBuilders.EventBuilder()
+                .setCategory(GoogleAnalytics.CAT_MAIN)
+                .setAction(GoogleAnalytics.ACTION_ACTION_MODE_TRIGGERED)
+                .build());
+
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+        return false;
+    }
+
+    @Override
+    public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+        if (item.getItemId() == R.id.action_delete) {
+            deleteCheckedItems();
+        }
+
+        mode.finish();
+        return true;
+    }
+
+    @Override
+    public void onDestroyActionMode(ActionMode mode) {
+        Log.d(TAG, "Clearing all the choices");
+        mGridview.clearChoices();
+        mAdapter.clearSelections();
+        mAdapter.notifyDataSetChanged();
+    }
+
+    private void deleteCheckedItems() {
+        int failedDelete = 0;
+        int successDelete = 0;
+        List<Integer> selectedItemPositions = mAdapter.getSelectedItems();
+        for (int i = selectedItemPositions.size() - 1; i >= 0; i--) {
+            String path = mImagePaths.get(selectedItemPositions.get(i));
+            mAdapter.removeData(selectedItemPositions.get(i));
+            File file = new File(path);
+            if (!file.delete()) {
+                Log.d(TAG, "failed to delete:" + path);
+                failedDelete ++;
+            } else {
+                successDelete ++;
+            }
+
+            MediaScannerConnection.scanFile(MainActivity.this,
+                    new String[]{path}, null, null);
+
+        }
+
+
+        if (failedDelete > 0) {
+            mTracker.send(new HitBuilders.EventBuilder()
+                    .setCategory(GoogleAnalytics.CAT_MAIN)
+                    .setAction(GoogleAnalytics.ACTION_DELETE_FILE_FAILED)
+                    .setLabel(String.valueOf(failedDelete))
+                    .build());
+        }
+
+        if (successDelete > 0) {
+            mTracker.send(new HitBuilders.EventBuilder()
+                    .setCategory(GoogleAnalytics.CAT_MAIN)
+                    .setAction(GoogleAnalytics.ACTION_DELETE_FILE)
+                    .setLabel(String.valueOf(successDelete))
+                    .build());
+        }
+    }
+
+    @Override
+    public void onItemCheckedStateChanged(ActionMode mode, int position, long id, boolean checked) {
+        int selectCount = mGridview.getCheckedItemCount();
+        mAdapter.toggleSelection(position);
+        switch (selectCount) {
+            case 1:
+                mode.setTitle(("1 " + getString(R.string.title_selected)));
+                break;
+            default:
+                mode.setTitle((selectCount + " " + getString(R.string.title_selected)));
+
+                break;
+        }
     }
 }

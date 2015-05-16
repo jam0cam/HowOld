@@ -12,4 +12,6 @@
     <string name="face_api_secret">TRmpqYhFCzM0P23U2axLDYVTdSfZGh3K</string>
     <string name="face_api_url">apius.faceplusplus.com</string>
     <string name="send_to">Share With</string>
+    <string name="action_delete">delete</string>
+    <string name="title_selected">Selected</string>
 </resources>
