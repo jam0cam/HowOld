@@ -19,6 +19,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.GridView;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
@@ -95,6 +96,8 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
         mGridview.setOnItemClickListener((parent, view, position, id) -> {
             Intent intent = new Intent(MainActivity.this, FaceActivity.class);
 
+            ImageView imageView = (ImageView) view.findViewById(R.id.image_view);
+
             Uri imageUri = new Uri.Builder()
                     .path(mImagePaths.get(position))
                     .build();
@@ -104,7 +107,7 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
             String transitionName = getString(R.string.transition_name);
 
             if (Util.atLeastLollipop()) {
-                view.setTransitionName(transitionName);
+                imageView.setTransitionName(transitionName);
             }
 
             mTracker.send(new HitBuilders.EventBuilder()
@@ -113,7 +116,7 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
                     .build());
 
 
-            ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(MainActivity.this, view, transitionName);
+            ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(MainActivity.this, imageView, transitionName);
             ActivityCompat.startActivity(MainActivity.this, intent, options.toBundle());
 
         });
