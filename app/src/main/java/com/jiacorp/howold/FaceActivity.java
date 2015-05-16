@@ -69,13 +69,16 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     private Drawable mMaleDrawable;
     private Drawable mFemaleDrawable;
 
-    private int mIconWidth;
-    private int mIconHeight;
+    private int mDefaultIconWidth;
+    private int mDefaultIconHeight;
 
-    private int mLabelWidth;
-    private int mLabelHeight;
+    private int mDefaultLabelWidth;
+    private int mDefaultLabelHeight;
+
+    private float mDefaultTextSize;
 
     private Paint mOrangePaint;
+    private Paint mRedPaint;
     private Paint mMalePaint;
     private Paint mFemalePaint;
 
@@ -96,18 +99,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
 
         ButterKnife.inject(this);
         ((MyApplication) getApplication()).inject(this);
-
-        mDialog = new MaterialProgressDialog(this);
-        mDialog.setOnCancelListener(dialog -> {
-            Log.d(TAG, "cancelled");
-            mDialog = null;
-            finish();
-        });
-
-        mDialog.setOnDismissListener(dialog -> {
-            Log.d(TAG, "dismissed");
-            mDialog = null;
-        });
 
         Intent intent = getIntent();
         String action = intent.getAction();
@@ -130,11 +121,12 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         mApiKey = getString(R.string.face_api_key);
         mApiSecret = getString(R.string.face_api_secret);
 
-        mIconWidth = getResources().getDimensionPixelOffset(R.dimen.icon_width);
-        mIconHeight = getResources().getDimensionPixelOffset(R.dimen.icon_height);
+        mDefaultIconWidth = getResources().getDimensionPixelOffset(R.dimen.icon_width);
+        mDefaultIconHeight = getResources().getDimensionPixelOffset(R.dimen.icon_height);
+        mDefaultTextSize = getResources().getDimension(R.dimen.age_text_size);
 
-        mLabelWidth = getResources().getDimensionPixelOffset(R.dimen.label_width);
-        mLabelHeight = getResources().getDimensionPixelOffset(R.dimen.label_height);
+        mDefaultLabelWidth = getResources().getDimensionPixelOffset(R.dimen.label_width);
+        mDefaultLabelHeight = getResources().getDimensionPixelOffset(R.dimen.label_height);
 
         messages = getResources().getStringArray(R.array.loading_messages);
 
@@ -145,16 +137,19 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         mOrangePaint.setStyle(Paint.Style.FILL);
         mOrangePaint.setColor(getResources().getColor(R.color.orange));
 
+        //use the red paint
+        mRedPaint = new Paint();
+        mRedPaint.setColor(Color.RED);
+        mRedPaint.setStrokeWidth(5);
+        mRedPaint.setStyle(Paint.Style.STROKE);
+
         mMalePaint = new Paint();
         mMalePaint.setStyle(Paint.Style.FILL);
         mMalePaint.setColor(getResources().getColor(R.color.male_blue));
-        mMalePaint.setTextSize(getResources().getDimension(R.dimen.age_text_size));
 
         mFemalePaint = new Paint();
         mFemalePaint.setStyle(Paint.Style.FILL);
         mFemalePaint.setColor(getResources().getColor(R.color.female_pink));
-        mFemalePaint.setTextSize(getResources().getDimension(R.dimen.age_text_size));
-
 
         if (Intent.ACTION_SEND.equals(action) && type != null) {
             if (type.startsWith("image/")) {
@@ -192,7 +187,20 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
             //there is already a detected image, saved in mShareUri
             loadDetectedImage();
         }
+    }
 
+    private void setupProgressDialog() {
+        mDialog = new MaterialProgressDialog(this);
+        mDialog.setOnCancelListener(dialog -> {
+            Log.d(TAG, "cancelled");
+            mDialog = null;
+            finish();
+        });
+
+        mDialog.setOnDismissListener(dialog -> {
+            Log.d(TAG, "dismissed");
+            mDialog = null;
+        });
 
     }
 
@@ -275,6 +283,9 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
     private void faceDetect(Bitmap image) {
         Random ran = new Random();
 
+        if (mDialog == null) {
+            setupProgressDialog();
+        }
         mDialog.setMessage(messages[ran.nextInt(messages.length)]);
         new Handler().postDelayed(() -> mDialog.show(), 500);
 
@@ -286,11 +297,6 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         if (mPersons == null || mPersons.isEmpty()) {
             return;
         }
-
-        //use the red paint
-        Paint paint = new Paint();
-        paint.setColor(Color.RED);
-        paint.setStrokeWidth(Math.max(mBitmap.getWidth(), mBitmap.getHeight()) / 100f);
 
         //create a new canvas
         Bitmap bitmap = Bitmap.createBitmap(mBitmap.getWidth(), mBitmap.getHeight(), mBitmap.getConfig());
@@ -314,37 +320,78 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
             y = y / 100 * mBitmap.getHeight();
             h = h / 100 * mBitmap.getHeight() * 0.7f;
 
+            p.faceBox = new Box(x-w, y-h, x+w, y+h);
+
             //draw the box to mark it out
-            canvas.drawLine(x - w, y - h, x - w, y + h, paint);
-            canvas.drawLine(x - w, y - h, x + w, y - h, paint);
-            canvas.drawLine(x + w, y + h, x - w, y + h, paint);
-            canvas.drawLine(x + w, y + h, x + w, y - h, paint);
+            canvas.drawRect(p.faceBox.left, p.faceBox.top, p.faceBox.right, p.faceBox.bottom, mRedPaint);
 
             //coordinates for female icon drawing
             int left = (int)(x-w+20);
             int top = (int) (y+h+10);
-            int right = left + mIconWidth;
+            int right = left + mDefaultIconWidth;
+
+            float labelWidth;
+            float labelHeight;
+            float iconWidth;
+            float iconHeight;
+            int leftIconPadding;
+            int topBottomIconPadding;
+
+            //this is the case where the face box is smaller than the label width we want to display,
+            //so we should make everything else smaller.
+            if (mDefaultLabelWidth > p.faceBox.getWidth()) {
+                labelWidth = p.faceBox.getWidth();
+                labelHeight = labelWidth / 1.6f;    //this is the width/height ratio
+                leftIconPadding = 10;
+                topBottomIconPadding = 5;
+                iconWidth = labelWidth /4 ;
+                iconHeight = iconWidth * 2;
+
+                float textWidth = labelWidth - leftIconPadding - iconWidth - 2*leftIconPadding;
+                int textSize = determineMaxTextSize(String.valueOf(p.age), textWidth);
+                mFemalePaint.setTextSize(textSize);
+                mMalePaint.setTextSize(textSize);
+
+            } else {    //the face box is big, so use default values
+                labelWidth = mDefaultLabelWidth;
+                labelHeight = mDefaultLabelHeight;
+                leftIconPadding = 20;
+                topBottomIconPadding = 10;
+                iconWidth = mDefaultIconWidth;
+                iconHeight = mDefaultIconHeight;
+                mFemalePaint.setTextSize(mDefaultTextSize);
+                mMalePaint.setTextSize(mDefaultTextSize);
+            }
+
+            p.labelBox = new Box(x-w, y+h, x-w + labelWidth, y + h + labelHeight);
 
             //draws orange rectangle
-            canvas.drawRect(x - w, y + h, x - w + mLabelWidth, y + h + mLabelHeight, mOrangePaint);
+            canvas.drawRect(p.labelBox.left, p.labelBox.top, p.labelBox.right, p.labelBox.bottom, mOrangePaint);
+
+
+            //find the bounds of the drawable icon
+            p.iconBox = new Box(p.labelBox.left + leftIconPadding, p.labelBox.top + topBottomIconPadding,
+                    p.labelBox.left + leftIconPadding + iconWidth, p.labelBox.top + topBottomIconPadding + iconHeight);
 
             if (p.gender.equalsIgnoreCase("female")) {
                 Log.d(TAG, "female detected");
 
                 //draws female icon on top of the rectangle
-                mFemaleDrawable.setBounds(left, top, right, top + mIconHeight);
+                mFemaleDrawable.setBounds((int)p.iconBox.left, (int)p.iconBox.top, (int)p.iconBox.right, (int)p.iconBox.bottom);
                 mFemaleDrawable.draw(canvas);
 
                 //draws age in the rectangle
-                canvas.drawText(String.valueOf(p.age), right + 20, top + mIconHeight - 20 , mFemalePaint);
+                canvas.drawText(String.valueOf(p.age), p.iconBox.right + leftIconPadding,
+                        p.iconBox.bottom - topBottomIconPadding , mFemalePaint);
             } else {
 
                 //draws female icon on top of the rectangle
-                mMaleDrawable.setBounds(left, top, right, top + mIconHeight);
+                mMaleDrawable.setBounds((int)p.iconBox.left, (int)p.iconBox.top, (int)p.iconBox.right, (int)p.iconBox.bottom);
                 mMaleDrawable.draw(canvas);
 
                 //draws age in the rectangle
-                canvas.drawText(String.valueOf(p.age), right + 20, top + mIconHeight - 20 , mMalePaint);
+                canvas.drawText(String.valueOf(p.age), p.iconBox.right + leftIconPadding,
+                        p.iconBox.bottom - topBottomIconPadding , mMalePaint);
             }
 
 
@@ -354,15 +401,29 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
         mBitmap = bitmap;
         storeDetectedImage(mBitmap);
 
-        FaceActivity.this.runOnUiThread(new Runnable() {
-
-            public void run() {
-                //show the image
-                mImageView.setImageBitmap(mBitmap);
-                Log.d(TAG, "finished drawing " + mPersons.size() + " faces onto the photo");
-            }
+        FaceActivity.this.runOnUiThread(() -> {
+            //show the image
+            mImageView.setImageBitmap(mBitmap);
+            Log.d(TAG, "finished drawing " + mPersons.size() + " faces onto the photo");
         });
+    }
 
+    /**
+     * Retrieve the maximum text size to fit in a given width.
+     * @param str (String): Text to check for size.
+     * @param maxWidth (float): Maximum allowed width.
+     * @return (int): The desired text size.
+     */
+    private int determineMaxTextSize(String str, float maxWidth)
+    {
+        int size = 0;
+        Paint paint = new Paint();
+
+        do {
+            paint.setTextSize(++ size);
+        } while(paint.measureText(str) < maxWidth);
+
+        return size;
     }
 
     @Override

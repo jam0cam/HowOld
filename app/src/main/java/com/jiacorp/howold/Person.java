@@ -12,4 +12,8 @@ public class Person {
     public float centerY;
     public float width;
     public float height;
+
+    public Box faceBox;
+    public Box labelBox;
+    public Box iconBox;
 }
