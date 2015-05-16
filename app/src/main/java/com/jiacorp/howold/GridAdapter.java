@@ -51,12 +51,21 @@ public class GridAdapter extends ArrayAdapter<String> {
 
     }
 
-    public List<Integer> getSelectedItems() {
-        List<Integer> items = new ArrayList<Integer>(selectedItems.size());
+    public ArrayList<Integer> getSelectedItems() {
+        ArrayList<Integer> items = new ArrayList<Integer>(selectedItems.size());
         for (int i = 0; i < selectedItems.size(); i++) {
             items.add(selectedItems.keyAt(i));
         }
         return items;
+    }
+
+    public void setSelectedItems(List<Integer> items) {
+        selectedItems.clear();
+        for (Integer i : items) {
+            selectedItems.put(i, true);
+        }
+
+        notifyDataSetChanged();
     }
 
     public void toggleSelection(int pos) {

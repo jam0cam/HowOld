@@ -60,8 +60,10 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
 
         ButterKnife.inject(this);
 
+        ArrayList<Integer> selectedItems = null;
         if (savedInstanceState != null) {
             mCurrentPhotoPath = savedInstanceState.getString("mCurrentPhotoPath");
+            selectedItems = (ArrayList<Integer>) savedInstanceState.getSerializable("selectedItems");
         }
 
         mTracker = ((MyApplication)getApplication()).getTracker();
@@ -80,6 +82,11 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
         mGridview.setChoiceMode(GridView.CHOICE_MODE_MULTIPLE_MODAL);
         mGridview.setMultiChoiceModeListener(this);
         mAdapter = new GridAdapter(this, 0, mImagePaths);
+
+        if (selectedItems != null && !selectedItems.isEmpty()) {
+            mAdapter.setSelectedItems(selectedItems);
+        }
+
         mGridview.setAdapter(mAdapter);
 
         setSupportActionBar(mToolbar);
@@ -120,6 +127,10 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString("mCurrentPhotoPath", mCurrentPhotoPath);
+
+        if (mAdapter != null && !mAdapter.getSelectedItems().isEmpty()) {
+            outState.putSerializable("selectedItems", mAdapter.getSelectedItems());
+        }
     }
 
     @OnClick(R.id.fab)
@@ -262,6 +273,8 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
                 .setAction(GoogleAnalytics.ACTION_ACTION_MODE_TRIGGERED)
                 .build());
 
+        updateActionModeTitle(mode);
+
         return true;
     }
 
@@ -328,8 +341,12 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
 
     @Override
     public void onItemCheckedStateChanged(ActionMode mode, int position, long id, boolean checked) {
-        int selectCount = mGridview.getCheckedItemCount();
         mAdapter.toggleSelection(position);
+        updateActionModeTitle(mode);
+    }
+
+    private void updateActionModeTitle(ActionMode mode) {
+        int selectCount = mGridview.getCheckedItemCount();
         switch (selectCount) {
             case 1:
                 mode.setTitle(("1 " + getString(R.string.title_selected)));
