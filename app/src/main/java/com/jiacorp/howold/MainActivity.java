@@ -1,8 +1,8 @@
 package com.jiacorp.howold;
 
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
-import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -18,6 +18,7 @@ import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -48,6 +49,9 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
 
     @InjectView(R.id.fab)
     ImageButton mFab;
+
+    @InjectView(R.id.empty_view)
+    FrameLayout mEmptyView;
 
     @InjectView(R.id.swipe_container)
     SwipeRefreshLayout mSwipeContainer;
@@ -86,7 +90,7 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
 
         mGridview.setChoiceMode(GridView.CHOICE_MODE_MULTIPLE_MODAL);
         mGridview.setMultiChoiceModeListener(this);
-
+        mGridview.setEmptyView(mEmptyView);
         if (selectedItems != null && !selectedItems.isEmpty()) {
             mAdapter.setSelectedItems(selectedItems);
             mAdapter.notifyDataSetChanged();
@@ -309,6 +313,25 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
         mAdapter.notifyDataSetChanged();
     }
 
+    private void deleteFileFromMediaStore(final ContentResolver contentResolver, final File file) {
+        String canonicalPath;
+        try {
+            canonicalPath = file.getCanonicalPath();
+        } catch (IOException e) {
+            canonicalPath = file.getAbsolutePath();
+        }
+        final Uri uri = MediaStore.Files.getContentUri("external");
+        final int result = contentResolver.delete(uri,
+                MediaStore.Files.FileColumns.DATA + "=?", new String[] {canonicalPath});
+        if (result == 0) {
+            final String absolutePath = file.getAbsolutePath();
+            if (!absolutePath.equals(canonicalPath)) {
+                contentResolver.delete(uri,
+                        MediaStore.Files.FileColumns.DATA + "=?", new String[]{absolutePath});
+            }
+        }
+    }
+
     private void deleteCheckedItems() {
         int failedDelete = 0;
         int successDelete = 0;
@@ -321,16 +344,15 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
                 Log.d(TAG, "failed to delete:" + path);
                 failedDelete ++;
             } else {
+                Log.d(TAG, "deleted:" + path);
                 successDelete ++;
+                deleteFileFromMediaStore(getContentResolver(), file);
             }
-
-            MediaScannerConnection.scanFile(MainActivity.this,
-                    new String[]{path}, null, null);
 
         }
 
-
         if (failedDelete > 0) {
+            Log.d(TAG, "failed to delete " + failedDelete + " items.");
             mTracker.send(new HitBuilders.EventBuilder()
                     .setCategory(GoogleAnalytics.CAT_MAIN)
                     .setAction(GoogleAnalytics.ACTION_DELETE_FILE_FAILED)
@@ -339,6 +361,7 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
         }
 
         if (successDelete > 0) {
+            Log.d(TAG, "deleted " + successDelete + " items.");
             mTracker.send(new HitBuilders.EventBuilder()
                     .setCategory(GoogleAnalytics.CAT_MAIN)
                     .setAction(GoogleAnalytics.ACTION_DELETE_FILE)
