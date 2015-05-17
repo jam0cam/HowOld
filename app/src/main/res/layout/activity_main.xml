@@ -5,21 +5,26 @@
     tools:context=".MainActivity"
     >
     <include layout="@layout/toolbar" />
-    <GridView
-        android:id="@+id/grid"
+    <android.support.v4.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:stretchMode="columnWidth"
-        android:columnWidth="150dp"
-        android:numColumns="auto_fit"
         android:layout_marginTop="?actionBarSize"
-        android:verticalSpacing="@dimen/grid_list_padding"
-        android:horizontalSpacing="@dimen/grid_list_padding"
-        android:padding="@dimen/grid_list_padding"
-        android:clipToPadding="false"
-        android:layoutAnimation="@anim/grid_load"
-        android:animateLayoutChanges="true"
-        />
 
+        >
+        <GridView
+            android:id="@+id/grid"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:stretchMode="columnWidth"
+            android:columnWidth="150dp"
+            android:numColumns="auto_fit"
+            android:verticalSpacing="@dimen/grid_list_padding"
+            android:horizontalSpacing="@dimen/grid_list_padding"
+            android:padding="@dimen/grid_list_padding"
+            android:clipToPadding="false"
+            android:layoutAnimation="@anim/grid_load"
+            />
+    </android.support.v4.widget.SwipeRefreshLayout>
     <include layout="@layout/fab" />
 </FrameLayout>

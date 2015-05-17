@@ -10,6 +10,7 @@ import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.content.res.ResourcesCompat;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -36,7 +37,7 @@ import butterknife.InjectView;
 import butterknife.OnClick;
 
 
-public class MainActivity extends AppCompatActivity implements GridView.MultiChoiceModeListener {
+public class MainActivity extends AppCompatActivity implements GridView.MultiChoiceModeListener, SwipeRefreshLayout.OnRefreshListener {
     private static final String TAG = MainActivity.class.getName();
 
     @InjectView(R.id.grid)
@@ -47,6 +48,9 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
 
     @InjectView(R.id.fab)
     ImageButton mFab;
+
+    @InjectView(R.id.swipe_container)
+    SwipeRefreshLayout mSwipeContainer;
 
     List<String> mImagePaths;
     GridAdapter mAdapter;
@@ -76,19 +80,18 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
 
         mFab.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.mipmap.ic_camera_white, null));
 
-        fetchImagePaths();
+        refreshList();
 
         //TODO: JIA: handle the case where there are no photos
 
         mGridview.setChoiceMode(GridView.CHOICE_MODE_MULTIPLE_MODAL);
         mGridview.setMultiChoiceModeListener(this);
-        mAdapter = new GridAdapter(this, 0, mImagePaths);
 
         if (selectedItems != null && !selectedItems.isEmpty()) {
             mAdapter.setSelectedItems(selectedItems);
+            mAdapter.notifyDataSetChanged();
         }
 
-        mGridview.setAdapter(mAdapter);
 
         setSupportActionBar(mToolbar);
         getSupportActionBar().setTitle(getString(R.string.your_photos));
@@ -124,6 +127,8 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
         CleanupAsynTask task = new CleanupAsynTask();
         task.execute(((MyApplication)getApplication()).getPrivateAppDirectory());
 
+        mSwipeContainer.setOnRefreshListener(this);
+        mSwipeContainer.setColorSchemeResources(R.color.orange, R.color.orange, R.color.orange);
     }
 
     @Override
@@ -359,5 +364,23 @@ public class MainActivity extends AppCompatActivity implements GridView.MultiCho
 
                 break;
         }
+    }
+
+    @Override
+    public void onRefresh() {
+        mTracker.send(new HitBuilders.EventBuilder()
+                .setCategory(GoogleAnalytics.CAT_MAIN)
+                .setAction(GoogleAnalytics.ACTION_REFRESH)
+                .build());
+
+        refreshList();
+    }
+
+    private void refreshList() {
+        fetchImagePaths();
+        mAdapter = new GridAdapter(this, 0, mImagePaths);
+        mGridview.setAdapter(mAdapter);
+        mGridview.startLayoutAnimation();
+        mSwipeContainer.setRefreshing(false);
     }
 }

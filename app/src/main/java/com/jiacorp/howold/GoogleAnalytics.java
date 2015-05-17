@@ -8,6 +8,7 @@ public class GoogleAnalytics {
     public static final String CAT_FACE = "Face Activity";
 
     public static final String ACTION_ACTION_MODE_TRIGGERED = "Action Mode";
+    public static final String ACTION_REFRESH = "Refreshing List";
     public static final String ACTION_DELETE_FILE = "Deleted File";
     public static final String ACTION_DELETE_FILE_FAILED = "Failed to Delete File";
     public static final String ACTION_LAUNCHED = "Launched";
