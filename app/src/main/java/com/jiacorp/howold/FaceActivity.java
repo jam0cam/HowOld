@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -375,7 +376,8 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
                 iconHeight = iconWidth * 2;
 
                 float textWidth = labelWidth - leftIconPadding - iconWidth - 2*leftIconPadding;
-                int textSize = determineMaxTextSize(String.valueOf(p.age), textWidth);
+                float textHeight = labelHeight - 3*topBottomIconPadding;
+                int textSize = determineMaxTextSize(String.valueOf(p.age), textWidth, textHeight);
                 mFemalePaint.setTextSize(textSize);
                 mMalePaint.setTextSize(textSize);
 
@@ -443,16 +445,29 @@ public class FaceActivity extends AppCompatActivity implements FaceppDetect.Dete
      * Retrieve the maximum text size to fit in a given width.
      * @param str (String): Text to check for size.
      * @param maxWidth (float): Maximum allowed width.
+     * @param maxHeight
      * @return (int): The desired text size.
      */
-    private int determineMaxTextSize(String str, float maxWidth)
+    private int determineMaxTextSize(String str, float maxWidth, float maxHeight)
     {
         int size = 0;
         Paint paint = new Paint();
 
-        do {
-            paint.setTextSize(++ size);
-        } while(paint.measureText(str) < maxWidth);
+
+        if (str.length() > 1) {
+            do {
+                paint.setTextSize(++ size);
+            } while(paint.measureText(str) < maxWidth);
+        } else {
+            //for single digit, worry about the height instead.
+            Rect rect = new Rect();
+            do {
+                paint.setTextSize(++ size);
+                paint.getTextBounds(str, 0, 1, rect);
+            } while(rect.height() < maxHeight);
+
+            size--;
+        }
 
         return size;
     }
